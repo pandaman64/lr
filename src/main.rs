@@ -187,14 +187,23 @@ fn main() {
             }
         ];
 
-    let mut null = HashSet::new();
-    nullable(&grammers, &mut null);
+    let null = {
+        let mut null = HashSet::new();
+        nullable(&grammers, &mut null);
+        null
+    };
 
-    let mut firsts = HashMap::new();
-    first(&grammers, &null, &mut firsts);
+    let firsts = {
+        let mut firsts = HashMap::new();
+        first(&grammers, &null, &mut firsts);
+        firsts
+    };
 
-    let mut follows = HashMap::new();
-    follow(&grammers, &null, &firsts, &mut follows);
+    let follows = {
+        let mut follows = HashMap::new();
+        follow(&grammers, &null, &firsts, &mut follows);
+        follows
+    };
 
     for grammer in grammers.iter() {
         println!("{}", grammer);
