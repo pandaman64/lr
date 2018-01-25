@@ -1,5 +1,5 @@
 [package]
-name = "LR"
+name = "lr"
 version = "0.1.0"
 authors = ["pandaman <kointosudesuyo@infoseek.jp>"]
 
