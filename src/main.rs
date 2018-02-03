@@ -192,6 +192,35 @@ fn insert_dots(grammers: Vec<Grammer>) -> Vec<Grammer> {
     ret
 }
 
+fn closure<'a>(g: &'a Grammer, grammers: &'a [Grammer]) -> HashSet<&'a Grammer> {
+    let p = g.dot_pos.unwrap();
+    if p == g.right.len() {
+        let mut ret = HashSet::new();
+        ret.insert(g);
+        ret
+    } else {
+        use Character::*;
+        match g.right[p] {
+            Terminal(_) => {
+                let mut ret = HashSet::new();
+                ret.insert(g);
+                ret
+            },
+            Nonterminal(ref n) => {
+                let mut ret = HashSet::new();
+                // TODO: improve searching
+                for gg in grammers {
+                    if gg.left == *n && gg.dot_pos.unwrap() == 0 {
+                        ret.extend(closure(gg, grammers).into_iter());
+                    }
+                }
+                ret.insert(g);
+                ret
+            },
+        }
+    }
+}
+
 fn main() {
     let s: Nonterminal = "S".to_string().into();
     let e: Nonterminal = "E".to_string().into();
@@ -236,8 +265,17 @@ fn main() {
         println!("{}", grammer);
     }
 
-    for g in insert_dots(grammers).iter() {
+    let grammers = insert_dots(grammers);
+    for g in grammers.iter() {
         println!("{}", g);
+    }
+
+    for g in grammers.iter() {
+        let closure = closure(&g, &grammers);
+        println!("{}", g);
+        for gg in closure {
+            println!("  {}", gg);
+        }
     }
 
     println!("{:?}", null);
