@@ -139,7 +139,7 @@ fn insert_dots(grammers: Vec<Grammer>) -> Vec<Grammer> {
     ret
 }
 
-fn closure<'a>(g: &'a Grammer, grammers: &'a [Grammer]) -> HashSet<&'a Grammer> {
+fn closure(g: Grammer, grammers: &[Grammer]) -> HashSet<Grammer> {
     let p = g.dot_pos.unwrap();
     if p == g.right.len() {
         let mut ret = HashSet::new();
@@ -150,7 +150,7 @@ fn closure<'a>(g: &'a Grammer, grammers: &'a [Grammer]) -> HashSet<&'a Grammer> 
         match g.right[p] {
             Terminal(_) => {
                 let mut ret = HashSet::new();
-                ret.insert(g);
+                ret.insert(g.clone()); // TODO: NLL
                 ret
             },
             Nonterminal(ref n) => {
@@ -158,10 +158,10 @@ fn closure<'a>(g: &'a Grammer, grammers: &'a [Grammer]) -> HashSet<&'a Grammer> 
                 // TODO: improve searching
                 for gg in grammers {
                     if gg.left == *n && gg.dot_pos.unwrap() == 0 {
-                        ret.extend(closure(gg, grammers).into_iter());
+                        ret.extend(closure(gg.clone(), grammers).into_iter());
                     }
                 }
-                ret.insert(g);
+                ret.insert(g.clone()); // TODO: NLL
                 ret
             },
         }
@@ -223,7 +223,7 @@ fn main() {
     }
 
     for g in grammers.iter() {
-        let closure = closure(&g, &grammers);
+        let closure = closure(g.clone(), &grammers);
         println!("{}", g);
         for gg in closure {
             println!("  {}", gg);
@@ -231,19 +231,47 @@ fn main() {
     }
 
     let mut arena = Arena::new();
-    arena.push(closure(&start, &grammers));
+    arena.push(closure(start, &grammers));
 
     let mut done = 0;
     while done < arena.nodes.len() {
-        let node = &mut arena.nodes[done];
-        for g in node.value.iter() {
+        for g in arena.nodes[done].value.clone().iter() {
+            let pos = g.dot_pos.unwrap();
+
+            if pos < g.right.len() {
+                let mut gg = (*g).clone();
+                gg.dot_pos = Some(pos + 1);
+
+                // TODO: cache result of closure()
+                let cls = closure(gg, &grammers);
+
+                let mut found = false;
+                for i in 0..arena.nodes.len() {
+                    if arena.nodes[i].value == cls {
+                        arena.edges[done].insert(g.right[pos].clone(), i);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if !found {
+                    arena.push(cls);
+                    arena.edges[done].insert(g.right[pos].clone(), arena.nodes.len() - 1);
+                }
+            }
         }
+        done += 1;
     }
 
     for n in arena.nodes.iter() {
         println!("----------");
+        println!("{}", n.id);
         for g in n.value.iter() {
             println!("{}", g);
+        }
+        println!();
+        for (ref c, to) in arena.edges[n.id].iter() {
+            println!("{:?} => {}", c, to);
         }
     }
     println!("----------");
