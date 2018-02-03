@@ -1,73 +1,20 @@
 #![feature(inclusive_range_syntax)]
 
-use std::fmt::{Formatter, Display};
 use std::collections::{HashSet, HashMap};
 use std::collections::hash_map;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct Nonterminal(String);
+mod graph;
+mod grammer;
 
-impl From<String> for Nonterminal {
-    fn from(c: String) -> Self {
-        Nonterminal(c.into())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Character {
-    Terminal(char),
-    Nonterminal(Nonterminal)
-}
-
-impl From<char> for Character {
-    fn from(c: char) -> Self {
-        Character::Terminal(c)
-    }
-}
-
-impl<T: Into<Nonterminal>> From<T> for Character {
-    fn from(c: T) -> Self {
-        Character::Nonterminal(c.into())
-    }
-}
-
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
-struct Grammer {
-    left: Nonterminal,
-    right: Vec<Character>,
-    dot_pos: Option<usize>,
-}
-
-impl Display for Grammer {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.left.0)?;
-        write!(f, " -> ")?;
-        for (c, n) in self.right.iter().zip(0..self.right.len()) {
-            if let Some(k) = self.dot_pos {
-                if k == n {
-                    write!(f, "・")?;
-                }
-            }
-            match c {
-                &Character::Terminal(c) => write!(f, "{}", c)?,
-                &Character::Nonterminal(ref n) => write!(f, "{}", n.0)?
-            }
-        }
-        if let Some(k) = self.dot_pos {
-            if k == self.right.len() {
-                write!(f, "・")?;
-            }
-        }
-        Ok(())
-    }
-}
+use graph::*;
+use grammer::{Grammer, Nonterminal};
 
 fn nullable(grammers: &[Grammer], result: &mut HashSet<Nonterminal>) {
     let original_len = result.len();
 
     for g in grammers {
         if g.right.iter().all(|c| {
-            if let &Character::Nonterminal(ref n) = c {
+            if let &grammer::Character::Nonterminal(ref n) = c {
                 result.contains(n)
             } else {
                 false
@@ -105,7 +52,7 @@ fn first(grammers: &[Grammer], nullable: &HashSet<Nonterminal>, result: &mut Has
 
     for g in grammers {
         for c in g.right.iter() {
-            use Character::*;
+            use grammer::Character::*;
 
             match *c {
                 Terminal(c) => {
@@ -138,7 +85,7 @@ fn follow(grammers: &[Grammer], nullable: &HashSet<Nonterminal>, first: &HashMap
 
     for g in grammers {
         for i in 0..g.right.len() {
-            use Character::*;
+            use grammer::Character::*;
 
             if let Nonterminal(ref target) = g.right[i] {
                 let mut reach_end = true;
@@ -199,7 +146,7 @@ fn closure<'a>(g: &'a Grammer, grammers: &'a [Grammer]) -> HashSet<&'a Grammer> 
         ret.insert(g);
         ret
     } else {
-        use Character::*;
+        use grammer::Character::*;
         match g.right[p] {
             Terminal(_) => {
                 let mut ret = HashSet::new();
@@ -242,6 +189,11 @@ fn main() {
                 dot_pos: None,
             }
         ];
+    let start = {
+        let mut start = grammers[0].clone();
+        start.dot_pos = Some(0);
+        start
+    };
 
     let null = {
         let mut null = HashSet::new();
@@ -277,6 +229,24 @@ fn main() {
             println!("  {}", gg);
         }
     }
+
+    let mut arena = Arena::new();
+    arena.push(closure(&start, &grammers));
+
+    let mut done = 0;
+    while done < arena.nodes.len() {
+        let node = &mut arena.nodes[done];
+        for g in node.value.iter() {
+        }
+    }
+
+    for n in arena.nodes.iter() {
+        println!("----------");
+        for g in n.value.iter() {
+            println!("{}", g);
+        }
+    }
+    println!("----------");
 
     println!("{:?}", null);
     println!("{:?}", firsts);
