@@ -1,3 +1,5 @@
+#![feature(inclusive_range_syntax)]
+
 use std::fmt::{Formatter, Display};
 use std::collections::{HashSet, HashMap};
 use std::collections::hash_map;
@@ -29,20 +31,31 @@ impl<T: Into<Nonterminal>> From<T> for Character {
     }
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 struct Grammer {
     left: Nonterminal,
-    right: Vec<Character>
+    right: Vec<Character>,
+    dot_pos: Option<usize>,
 }
 
 impl Display for Grammer {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.left.0)?;
         write!(f, " -> ")?;
-        for c in self.right.iter() {
+        for (c, n) in self.right.iter().zip(0..self.right.len()) {
+            if let Some(k) = self.dot_pos {
+                if k == n {
+                    write!(f, "・")?;
+                }
+            }
             match c {
                 &Character::Terminal(c) => write!(f, "{}", c)?,
                 &Character::Nonterminal(ref n) => write!(f, "{}", n.0)?
+            }
+        }
+        if let Some(k) = self.dot_pos {
+            if k == self.right.len() {
+                write!(f, "・")?;
             }
         }
         Ok(())
@@ -168,6 +181,17 @@ fn follow(grammers: &[Grammer], nullable: &HashSet<Nonterminal>, first: &HashMap
     }
 }
 
+fn insert_dots(grammers: Vec<Grammer>) -> Vec<Grammer> {
+    let mut ret = vec![];
+    for mut g in grammers.into_iter() {
+        for i in 0..=g.right.len() {
+            g.dot_pos = Some(i);
+            ret.push(g.clone());
+        }
+    }
+    ret
+}
+
 fn main() {
     let s: Nonterminal = "S".to_string().into();
     let e: Nonterminal = "E".to_string().into();
@@ -175,15 +199,18 @@ fn main() {
         vec![
             Grammer {
                 left: s.clone(),
-                right: vec![e.clone().into(), '+'.into(), e.clone().into()]
+                right: vec![e.clone().into(), '+'.into(), e.clone().into()],
+                dot_pos: None,
             },
             Grammer {
                 left: e.clone(),
-                right: vec!['a'.into(), e.clone().into()]
+                right: vec!['a'.into(), e.clone().into()],
+                dot_pos: None,
             },
             Grammer {
                 left: e.clone(),
-                right: vec![]
+                right: vec![],
+                dot_pos: None,
             }
         ];
 
@@ -207,6 +234,10 @@ fn main() {
 
     for grammer in grammers.iter() {
         println!("{}", grammer);
+    }
+
+    for g in insert_dots(grammers).iter() {
+        println!("{}", g);
     }
 
     println!("{:?}", null);
