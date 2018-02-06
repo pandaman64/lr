@@ -10,14 +10,44 @@ impl From<String> for Nonterminal {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Terminal {
+    EOS,
+    Character(char),
+}
+
+impl From<char> for Terminal {
+    fn from(c: char) -> Self {
+        Terminal::Character(c)
+    }
+}
+
+impl Display for Terminal {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        use Terminal::*;
+
+        match *self {
+            EOS => write!(f, "$"),
+            Character('$') => write!(f, "'$'"),
+            Character(c) => write!(f, "{}", c),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Character {
-    Terminal(char),
+    Terminal(Terminal),
     Nonterminal(Nonterminal)
 }
 
 impl From<char> for Character {
     fn from(c: char) -> Self {
+        Character::Terminal(c.into())
+    }
+}
+
+impl From<Terminal> for Character {
+    fn from(c: Terminal) -> Self {
         Character::Terminal(c)
     }
 }

@@ -7,7 +7,7 @@ mod graph;
 mod grammer;
 
 use graph::*;
-use grammer::{Grammer, Nonterminal};
+use grammer::{Grammer, Nonterminal, Terminal};
 
 fn nullable(grammers: &[Grammer], result: &mut HashSet<Nonterminal>) {
     let original_len = result.len();
@@ -29,7 +29,7 @@ fn nullable(grammers: &[Grammer], result: &mut HashSet<Nonterminal>) {
     }
 }
 
-fn add_char(result: &mut HashMap<Nonterminal, HashSet<char>>, n: Nonterminal, c: char) -> bool {
+fn add_char(result: &mut HashMap<Nonterminal, HashSet<Terminal>>, n: Nonterminal, c: Terminal) -> bool {
     use hash_map::Entry::*;
 
     match result.entry(n.clone()) {
@@ -47,7 +47,7 @@ fn add_char(result: &mut HashMap<Nonterminal, HashSet<char>>, n: Nonterminal, c:
     false
 }
 
-fn first(grammers: &[Grammer], nullable: &HashSet<Nonterminal>, result: &mut HashMap<Nonterminal, HashSet<char>>) {
+fn first(grammers: &[Grammer], nullable: &HashSet<Nonterminal>, result: &mut HashMap<Nonterminal, HashSet<Terminal>>) {
     let mut dirty = false;
 
     for g in grammers {
@@ -80,7 +80,7 @@ fn first(grammers: &[Grammer], nullable: &HashSet<Nonterminal>, result: &mut Has
     }
 }
 
-fn follow(grammers: &[Grammer], nullable: &HashSet<Nonterminal>, first: &HashMap<Nonterminal, HashSet<char>>, result: &mut HashMap<Nonterminal, HashSet<char>>) {
+fn follow(grammers: &[Grammer], nullable: &HashSet<Nonterminal>, first: &HashMap<Nonterminal, HashSet<Terminal>>, result: &mut HashMap<Nonterminal, HashSet<Terminal>>) {
     let mut dirty = false;
 
     for g in grammers {
@@ -175,11 +175,11 @@ enum Action {
 }
 
 struct ParserTable {
-    shift_reduce_table: HashMap<(usize, char), Vec<Action>>,
+    shift_reduce_table: HashMap<(usize, Terminal), Vec<Action>>,
     goto_table: HashMap<(usize, Nonterminal), Vec<usize>>,
 }
 
-fn construct_parser_table(arena: &Arena<HashSet<Grammer>>, follow: &HashMap<Nonterminal, HashSet<char>>) -> ParserTable {
+fn construct_parser_table(arena: &Arena<HashSet<Grammer>>, follow: &HashMap<Nonterminal, HashSet<Terminal>>) -> ParserTable {
     let mut shift_reduce_table = HashMap::new();
     let mut goto_table = HashMap::new();
 
@@ -215,10 +215,16 @@ fn construct_parser_table(arena: &Arena<HashSet<Grammer>>, follow: &HashMap<Nont
 }
 
 fn main() {
+    let start: Nonterminal = "S'".to_string().into();
     let s: Nonterminal = "S".to_string().into();
     let e: Nonterminal = "E".to_string().into();
     let grammers = 
         vec![
+            Grammer {
+                left: start.clone(),
+                right: vec![s.clone().into(), Terminal::EOS.into()],
+                dot_pos: None
+            },
             Grammer {
                 left: s.clone(),
                 right: vec![e.clone().into(), '+'.into(), e.clone().into()],
