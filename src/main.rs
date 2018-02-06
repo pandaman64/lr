@@ -168,6 +168,52 @@ fn closure(g: Grammer, grammers: &[Grammer]) -> HashSet<Grammer> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Action {
+    Shift(usize),
+    Reduce(Grammer),
+}
+
+struct ParserTable {
+    shift_reduce_table: HashMap<(usize, char), Vec<Action>>,
+    goto_table: HashMap<(usize, Nonterminal), Vec<usize>>,
+}
+
+fn construct_parser_table(arena: &Arena<HashSet<Grammer>>, follow: &HashMap<Nonterminal, HashSet<char>>) -> ParserTable {
+    let mut shift_reduce_table = HashMap::new();
+    let mut goto_table = HashMap::new();
+
+    for n in arena.nodes.iter() {
+        let from = n.id;
+        for (c, &to) in arena.edges[from].iter() {
+            use grammer::Character::*;
+
+            match *c {
+                Terminal(c) => shift_reduce_table.entry((from, c)).or_insert_with(Vec::new).push(Action::Shift(to)),
+                Nonterminal(ref n) => goto_table.entry((from, n.clone())).or_insert_with(Vec::new).push(to),
+            }
+        }
+
+        for g in n.value.iter() {
+            let dot_pos = g.dot_pos.unwrap();
+            if dot_pos == g.right.len() {
+                println!("{:?}", g);
+                // SLR
+                if let Some(it) = follow.get(&g.left).map(HashSet::iter) {
+                    for &c in it {
+                        shift_reduce_table.entry((from, c)).or_insert_with(Vec::new).push(Action::Reduce(g.clone()));
+                    }
+                }
+            }
+        }
+    }
+
+    ParserTable {
+        shift_reduce_table,
+        goto_table
+    }
+}
+
 fn main() {
     let s: Nonterminal = "S".to_string().into();
     let e: Nonterminal = "E".to_string().into();
@@ -275,6 +321,16 @@ fn main() {
         }
     }
     println!("----------");
+
+    let table = construct_parser_table(&arena, &follows);
+
+    for ((id, c), actions) in table.shift_reduce_table {
+        println!("{}, {} => {:?}", id, c, actions);
+    }
+
+    for ((id, n), gotos) in table.goto_table {
+        println!("{}, {:?} => {:?}", id, n, gotos);
+    }
 
     println!("{:?}", null);
     println!("{:?}", firsts);
